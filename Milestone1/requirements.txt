@@ -1,1 +1,11 @@
-
+altair
+pandas
+streamlit
+streamlit-lottie
+requests
+transformers
+streamlit
+huggingface_hub
+requests
+transformers
+torch
