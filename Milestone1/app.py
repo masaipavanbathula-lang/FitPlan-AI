@@ -1,7 +1,20 @@
 import streamlit as st
+import streamlit.components.v1 as components
+from transformers import pipeline
 
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(page_title="FIT Plan AI – Personalized Fitness Plan Generator", layout="centered")
+# ---------------- PAGE CONFIG (MUST BE FIRST) ----------------
+st.set_page_config(
+    page_title="FIT Plan AI – Personalized Fitness Plan Generator",
+    layout="centered"
+)
+# ---------------- LOAD MODEL ----------------
+@st.cache_resource
+def load_model():
+ return pipeline(
+ "text-generation",
+ model="google/flan-t5-base"
+ ) 
+generator = load_model()
 
 # ---------------- TITLE ----------------
 st.title("🏋️ FIT Plan AI – Personalized Fitness Plan Generator")
@@ -70,9 +83,9 @@ def calculate_bmi(weight, height_cm):
 def bmi_category(bmi):
     if bmi < 18.5:
         return "Underweight"
-    elif 18.5 <= bmi < 25:
+    elif bmi < 25:
         return "Normal"
-    elif 25 <= bmi < 30:
+    elif bmi < 30:
         return "Overweight"
     else:
         return "Obese"
@@ -114,4 +127,3 @@ if st.button("Calculate BMI & Submit"):
 # ---------------- FOOTER ----------------
 st.markdown("---")
 st.markdown("💡 *BMI is a screening tool. Combine it with proper training and diet for best results.*")
-
