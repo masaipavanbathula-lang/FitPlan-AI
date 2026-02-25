@@ -42,13 +42,19 @@ div.stButton > button {
 """, unsafe_allow_html=True)
 
 # ---------------- LOAD MODEL ----------------
+from transformers import AutoConfig
+
 @st.cache_resource
 def load_model():
-    tokenizer = AutoTokenizer.from_pretrained("google/flan-t5-base")
-    model = AutoModelForSeq2SeqLM.from_pretrained("google/flan-t5-base")
-    return tokenizer, model
+    model_name = "google/flan-t5-base"
 
-tokenizer, model = load_model()
+    config = AutoConfig.from_pretrained(model_name)
+    config.tie_word_embeddings = False 
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name, config=config)
+
+    return tokenizer, model
 
 # ---------------- LOTTIE FUNCTION ----------------
 def load_lottie(url):
@@ -105,36 +111,42 @@ with tab2:
 
     name = st.text_input("👤 Enter Your Name")
 
+    age = st.number_input("🎂 Age", min_value=10, max_value=100, step=1)
+
     gender = st.radio("Gender *", ["Male", "Female", "Other"])
+
     weight = st.number_input("Weight (kg)", min_value=30, max_value=200)
+
     height = st.number_input("Height (cm)", min_value=100, max_value=220)
 
     goal = st.selectbox(
         "🎯 Select Your Goals",
         [
-        "Flexible",
-        "Weight Loss",
-        "Build Muscle",
-        "Strength Gaining",
-        "Abs Building"
-]
+            "Flexible",
+            "Weight Loss",
+            "Build Muscle",
+            "Strength Gaining",
+            "Abs Building"
+        ]
     )
 
     equipment = st.multiselect(
         "🏋️ Available Equipment",
-        [    "Dumbbells",
-        "Resistance Band",
-        "Yoga Mat",
-        "No Equipment",
-        "Inclined Bench",
-        "Treadmill",
-        "Cycle",
-        "Skipping Rope",
-        "Hand Gripper",
-        "Pull-ups Bar",
-        "Weight Plates",
-        "Hula Hoop Ring",
-        "Bosu Ball"]
+        [
+            "Dumbbells",
+            "Resistance Band",
+            "Yoga Mat",
+            "No Equipment",
+            "Inclined Bench",
+            "Treadmill",
+            "Cycle",
+            "Skipping Rope",
+            "Hand Gripper",
+            "Pull-ups Bar",
+            "Weight Plates",
+            "Hula Hoop Ring",
+            "Bosu Ball"
+        ]
     )
 
     fitness_level = st.radio(
@@ -142,8 +154,10 @@ with tab2:
         ["Beginner", "Intermediate", "Advanced"]
     )
 
+    # ✅ Properly aligned dictionary
     st.session_state.user_data = {
         "name": name,
+        "age": age,
         "gender": gender,
         "weight": weight,
         "height": height,
@@ -151,7 +165,6 @@ with tab2:
         "equipment": equipment,
         "fitness_level": fitness_level
     }
-
 # ---------------- BMI TAB ----------------
 with tab3:
     st.header("📊 BMI Analysis")
@@ -173,7 +186,7 @@ with tab3:
             y="BMI Range"
         )
 
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width="stretch")
     else:
         st.info("Please enter your details in the User Details tab.")
 
@@ -181,7 +194,7 @@ with tab3:
 with tab4:
     st.header("💪 Generate Your Detailed Workout Plan")
 
-    # Select number of days (3 to 7)
+    # ✅ Define selected_days BEFORE button
     selected_days = st.selectbox(
         "📅 Select Number of Workout Days",
         [3, 4, 5, 6, 7]
@@ -189,51 +202,76 @@ with tab4:
 
     if st.button("🔥 Generate Workout Plan"):
 
-        data = st.session_state.user_data
-        bmi, category = calculate_bmi(data["weight"], data["height"])
+        if "user_data" not in st.session_state:
+            st.error("⚠️ Please enter your details first.")
+        else:
+            data = st.session_state.user_data
 
-        prompt = f"""
-You are a certified strength and conditioning coach.
-Create a SAFE and EFFECTIVE {selected_days}-day workout plan.
-User Profile:
-- Name: {data['name']}
-- Gender: {data['gender']}
-- BMI: {bmi}
-- Goal: {data['goal']}
-- Fitness Level: {data['fitness_level']}
-- Available Equipment: {data['equipment']}
-Important Instructions:
-1. Design specifically for a beginner (if beginner selected).
-2. Focus on fat loss and improving overall fitness.
-3. Each day must include:
-   - Warm-up (5–10 minutes)
-   - Main workout (4–6 exercises)
-   - Sets, reps, and rest time
-   - Cool-down/stretching
-4. Include at least 2 cardio-focused days if days >= 4.
-5. Avoid advanced or high-injury-risk movements.
-6. Keep each session under 45 minutes.
-7. Clearly label Day 1 to Day {selected_days}.
-8. Provide detailed structured formatting.
-9. Return ONLY the structured workout plan.
+            if data["gender"] in ["Male", "Female"] and data["age"] > 17:
+
+                bmi, category = calculate_bmi(data["weight"], data["height"])
+
+                prompt = f"""
+You are a professional certified fitness coach.
+Generate a structured {selected_days}-day workout plan.
+STRICT FORMAT RULES:
+- Use bold headings exactly like this:
+  **Day 1: Title**
+- Include sections exactly like:
+  **Warm-up (5 minutes)**
+  **Main Workout (sets, reps, rest)**
+  **Cardio (if needed)**
+  **Cool-down/Stretching (5 minutes)**
+- Number each exercise.
+- Keep clean formatting.
+- If rest day, write: **Day X: Rest Day**
+User Details:
+Name: {data['name']}
+Age: {data['age']}
+Gender: {data['gender']}
+BMI: {bmi:.2f}
+Goal: {data['goal']}
+Fitness Level: {data['fitness_level']}
+Available Equipment: {data['equipment']}
+Requirements:
+- Beginner friendly if beginner selected
+- At least 1 rest day if days >= 4
+- At least 1 cardio focused day
+- Under 45 minutes per session
+- Safe exercises only
+- Clear structured formatting
+- Return ONLY workout plan
 """
 
-        inputs = tokenizer(prompt, return_tensors="pt")
+                inputs = tokenizer(prompt, return_tensors="pt")
 
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=600,  # Increased for detailed output
-            temperature=0.7,
-            do_sample=True
-        )
+                outputs = model.generate(
+                    **inputs,
+                    max_new_tokens=600,
+                    temperature=0.3,
+                    do_sample=True
+                )
 
-        response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                response = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        st.markdown(
-            f"<div class='name-tag'>🏋️ {selected_days}-Day Workout Plan for {data['name']}</div>",
-            unsafe_allow_html=True
-        )
+                st.markdown(
+                    f"<div class='name-tag'>🏋️ {selected_days}-Day Workout Plan for {data['name']} (Age {data['age']})</div>",
+                    unsafe_allow_html=True
+                )
 
-        st.write(response)
+                st.write(response)
 
-        st.success("Train smart. Stay consistent. Recover well. 🚀")
+                st.markdown("""
+                ---
+                ### 🥗 Tip:
+                **A good workout plan requires a better diet.**
+                - Eat high-protein meals  
+                - Stay hydrated  
+                - Focus on whole foods  
+                - Sleep 7–8 hours  
+                """)
+
+                st.success("Train smart. Stay consistent. Recover well. 🚀")
+
+            else:
+                st.error("⚠️ Workout plan is available only for males and females above 17 years old.")
