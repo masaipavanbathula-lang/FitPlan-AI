@@ -2,3 +2,8 @@ streamlit
 requests
 python-dotenv
 huggingface_hub
+altair
+pandas
+streamlit-lottie
+transformers
+torch
