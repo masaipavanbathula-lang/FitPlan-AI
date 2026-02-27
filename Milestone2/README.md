@@ -1,4 +1,6 @@
-from huggingface_hub import InferenceClient
+ Prompt design
+ ---------------------------------------
+ from huggingface_hub import InferenceClient
 import os
 
 def query_model(prompt):
@@ -24,7 +26,7 @@ def query_model(prompt):
     except Exception as e:
         return f"Error: {str(e)}"
         -----------------------------
-        Model Name: **google/flan-t5-base**
+        Model Name:Qwen/Qwen2.5-7B-Instruct
         --------------------------------------
         ## 📝 Prompt Design Explanation
 
@@ -111,4 +113,5 @@ Diet:
 - Complex carbohydrates
 
 ---
+Hugging face link:https://huggingface.co/spaces/Saipavan06/fitnessplan2
 
